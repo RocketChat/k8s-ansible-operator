@@ -1,0 +1,14 @@
+apiVersion: open.rocket.chat/v1alpha1
+kind: RocketChat
+metadata:
+  name: rocketchat-quickstart
+spec:
+  labels:
+    app: rocketchat
+  mongodbDatabase: rocketchat
+  mongodbReplicaName: rs0
+  mongodbReplicas: 1
+  mongodbSecretName: mongodb-secret
+  memoryLimit: 512Mi
+  rocketchatReplicas: 1
+  volumeCapacity: 1Gi

@@ -1,0 +1,40 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rocketchat-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: rocketchat-operator
+  template:
+    metadata:
+      labels:
+        name: rocketchat-operator
+    spec:
+      serviceAccountName: rocketchat-operator
+      containers:
+        - name: rocketchat-operator
+          # Replace this with the built image name
+          image: "{{ image }}"
+          imagePullPolicy: "{{ pull_policy }}"
+          volumeMounts:
+          - mountPath: /tmp/ansible-operator/runner
+            name: runner
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "rocketchat-operator"
+            - name: ANSIBLE_GATHERING
+              value: explicit
+      volumes:
+        - name: runner
+          emptyDir: {}

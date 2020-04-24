@@ -1,0 +1,157 @@
+---
+# tasks file for mongodb
+- name: create mongodb persistent volume claim
+  k8s:
+    definition:
+      kind: PersistentVolumeClaim
+      apiVersion: v1
+      metadata:
+        name: "{{ k8s_name }}-mongodb"
+        namespace: "{{ namespace }}"
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: "{{ volume_capacity }}"
+  when:
+  - volume_capacity != ""
+
+- name: fetch secret from cluster # set_fact prevents an API call everytime this variable is referenced
+  set_fact:
+    secret_data: "{{ lookup('k8s', kind='Secret', namespace=meta.namespace, resource_name=mongodb_secret_name) }}"
+
+- name: set mongodb credential facts from secret
+  set_fact:
+    mongodb_user: "{{ secret_data.data.username | b64decode }}"
+    mongodb_password: "{{ secret_data.data.password | b64decode }}"
+    mongodb_admin_password: "{{ secret_data.data.admin_password | b64decode }}"
+    mongodb_keyfile_value: "{{ secret_data.data.keyfile | b64decode }}"
+  when:
+    - secret_data != [] # if secret_data is not empty, eg: the user-specified secret was found successfully
+
+- name: create secret if missing
+  block:
+  - name: generate mongodb credential facts
+    set_fact:
+      mongodb_user: user{{ lookup('password', '/dev/null length=3 chars=digits') }} # username will be in the form of 'user###'
+      mongodb_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}" # 16char alphanum string
+      mongodb_admin_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') + '' }}" # appending an empty string is a workaround for this ansible-2.9.5 bug: https://github.com/ansible/ansible/issues/34144
+      mongodb_keyfile_value: "{{ lookup('password', '/dev/null length=756') | b64encode }}" # keyfile value gets base64 encoded 2x
+  - name: create secret
+    k8s:
+      definition: "{{ lookup('template', './roles/mongodb/files/mongodb-secret.yml.j2') }}"
+  when:
+  - secret_data == [] # if secret_data is an empty list (if the var lookup can't find a secret with the specified name)
+
+- name: create mongodb deployment
+  k8s:
+    definition:
+      kind: StatefulSet
+      apiVersion: apps/v1
+      metadata:
+        name: "{{ k8s_name }}-mongodb"
+        namespace: "{{ namespace }}"
+        labels: "{{ labels }}"
+      spec:
+        updateStrategy:
+          type: RollingUpdate
+        replicas: 1
+        test: false
+        selector:
+          matchLabels: "{{ labels }}"
+        template:
+          metadata:
+            labels: "{{ labels }}"
+          spec:
+            volumes:
+            - name: mongodb-data
+              emptyDir: {}
+            containers:
+            - name: mongodb
+              image: "{{ lookup('env', 'RELATED_IMAGE_MONGODB')|default('registry.access.redhat.com/rhscl/mongodb-36-rhel7:1-45', true) }}"
+              command:
+                - '/usr/bin/run-mongod-replication'
+              ports:
+              - containerPort: 27017
+                protocol: TCP
+              env:
+              - name: MONGODB_DATABASE
+                value: "{{ mongodb_database }}"
+              - name: MONGODB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: "{{ mongodb_secret_name }}"
+                    key: username
+              - name: MONGODB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: "{{ mongodb_secret_name }}"
+                    key: password
+              - name: MONGODB_ADMIN_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: "{{ mongodb_secret_name }}"
+                    key: admin_password
+              - name: MONGODB_REPLICA_NAME
+                value: "{{ mongodb_replica_name }}"
+              - name: MONGODB_KEYFILE_VALUE
+                valueFrom:
+                  secretKeyRef:
+                    name: "{{ mongodb_secret_name }}"
+                    key: keyfile
+              resources:
+                limits:
+                  memory: "{{ memory_limit }}"
+              volumeMounts:
+              - name: mongodb-data
+                mountPath: "/var/lib/mongodb/data"
+              livenessProbe:
+                tcpSocket:
+                  port: 27017
+                initialDelaySeconds: 30
+                timeoutSeconds: 1
+                periodSeconds: 10
+                successThreshold: 1
+                failureThreshold: 3
+              readinessProbe:
+                exec:
+                  command:
+                  - "/bin/sh"
+                  - "-i"
+                  - "-c"
+                  - mongo 127.0.0.1:27017/$MONGODB_DATABASE -u $MONGODB_USER -p $MONGODB_PASSWORD
+                    --eval="quit()"
+                initialDelaySeconds: 3
+                timeoutSeconds: 1
+                periodSeconds: 10
+                successThreshold: 1
+                failureThreshold: 3
+              terminationMessagePath: "/dev/termination-log"
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                capabilities: {}
+                privileged: false
+            restartPolicy: Always
+            terminationGracePeriodSeconds: 30
+            dnsPolicy: ClusterFirst
+            securityContext: {}
+
+- name: create mongodb service
+  k8s:
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        name: "{{ k8s_name }}-mongodb"
+        namespace: "{{ namespace }}"
+        labels: "{{ labels }}"
+      spec:
+        ports:
+        - name: mongo
+          protocol: TCP
+          port: 27017
+          targetPort: 27017
+        selector: "{{ labels }}" 
+        type: ClusterIP
+        clusterIP: None

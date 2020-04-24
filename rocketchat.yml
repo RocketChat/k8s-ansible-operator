@@ -1,0 +1,12 @@
+- name: Deploy Rocket.Chat
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    meta:
+      namespace: rocketchat
+    mongodb_database: rocketchat
+    mongodb_secret_name: mongodb-secret
+
+  roles:
+  - ./roles/mongodb
+  - ./roles/rocketchat

@@ -1,0 +1,12 @@
+---
+# defaults file for mongodb
+k8s_name: "{{ meta.name | default('mongodb') }}"
+namespace: "{{ meta.namespace | default('mongodb') }}"
+labels:
+  app: mongodb
+mongodb_database: exampledb
+mongodb_replica_name: rs0
+mongodb_replicas: 1
+mongodb_secret_name: mongodb-secret
+memory_limit: 512Mi
+volume_capacity: ""  # empty string here means default to ephemeral volume

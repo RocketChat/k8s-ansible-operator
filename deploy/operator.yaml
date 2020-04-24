@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rocketchat-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: rocketchat-operator
+  template:
+    metadata:
+      labels:
+        name: rocketchat-operator
+    spec:
+      serviceAccountName: rocketchat-operator
+      containers:
+        - name: rocketchat-operator
+          # Replace this with the built image name
+          image: quay.io/rhc4tp/rocketchat-operator:v0.0.1
+          imagePullPolicy: "Always"
+          volumeMounts:
+          - mountPath: /tmp/ansible-operator/runner
+            name: runner
+          env:
+            - name: RELATED_IMAGE_MONGODB
+              value: registry.access.redhat.com/rhscl/mongodb-36-rhel7:1-45
+            - name: RELATED_IMAGE_ROCKETCHAT
+              value: registry.connect.redhat.com/rocketchat/rocketchat:1.1.1-19
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "rocketchat-operator"
+            - name: ANSIBLE_GATHERING
+              value: explicit
+      volumes:
+        - name: runner
+          emptyDir: {}

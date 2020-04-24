@@ -1,0 +1,107 @@
+---
+# Rocket.Chat main tasks file: uses facts set from the MongoDB role.
+- name: create rocketchat deployment
+  k8s:
+    definition: 
+      kind: Deployment
+      apiVersion: v1
+      metadata:
+        name: "{{ k8s_name }}-rocketchat"
+        namespace: "{{ namespace }}"
+        labels: "{{ labels }}"
+      spec:
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxUnavailable: 25%
+            maxSurge: 25%
+          resources: {}
+        replicas: "{{ rocketchat_replicas }}"
+        test: false
+        selector:
+          matchLabels: "{{ labels }}"
+        template:
+          metadata:
+            labels: "{{ labels }}"
+          spec:
+            volumes:
+            - name: rocketchat-volume-1
+              emptyDir: {}
+            containers:
+            - name: rocketchat
+              image: "{{ lookup('env', 'RELATED_IMAGE_ROCKETCHAT')|default('registry.connect.redhat.com/rocketchat/rocketchat:latest', true) }}"
+              ports:
+              - containerPort: 3000
+                protocol: TCP
+              env:
+              - name: MONGO_URL
+                value: "mongodb://{{ mongodb_user }}:{{ mongodb_password }}@{{ k8s_name }}-mongodb:27017/{{ mongodb_database }}"
+              - name: MONGO_OPLOG_URL
+                value: "mongodb://admin:{{ mongodb_admin_password }}@{{ k8s_name }}-mongodb:27017/local?authSource=admin&replSet={{ mongodb_replica_name }}"
+              resources: {}
+              volumeMounts:
+              - name: rocketchat-volume-1
+                mountPath: /app/uploads
+              readinessProbe:
+                httpGet:
+                  path: /api/v1/info
+                  port: 3000
+                  scheme: HTTP
+                initialDelaySeconds: 5
+                timeoutSeconds: 1
+                periodSeconds: 10
+                successThreshold: 1
+                failureThreshold: 3
+              livenessProbe:
+                httpGet:
+                  path: /api/v1/info
+                  port: 3000
+                  scheme: HTTP
+                initialDelaySeconds: 30
+                timeoutSeconds: 1
+                periodSeconds: 10
+                successThreshold: 1
+                failureThreshold: 3
+              terminationMessagePath: /dev/termination-log
+              imagePullPolicy: Always
+            restartPolicy: Always
+            terminationGracePeriodSeconds: 30
+            dnsPolicy: ClusterFirst
+            securityContext: {}
+
+- name: create rocketchat service
+  k8s:
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        name: "{{ k8s_name }}-rocketchat"
+        namespace: "{{ namespace }}"
+        labels: "{{ labels }}"
+      spec:
+        ports:
+        - name: 3000-tcp
+          protocol: TCP
+          port: 3000
+          targetPort: 3000
+        selector:
+          "{{ labels }}"
+        type: ClusterIP
+        sessionAffinity: None
+
+- name: create rocketchat route
+  k8s:
+    definition:
+      kind: Route
+      apiVersion: v1
+      metadata:
+        name: "{{ k8s_name }}-rocketchat"
+        namespace: "{{ namespace }}"
+        labels: "{{ labels }}"
+      spec:
+        to:
+          kind: Service
+          name: "{{ k8s_name }}-rocketchat"
+        port:
+          targetPort: 3000-tcp
+

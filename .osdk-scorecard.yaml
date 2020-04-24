@@ -1,0 +1,8 @@
+scorecard:
+  plugins:
+    - basic:
+        olm-deployed: true
+        csv-path: deploy/olm-catalog/rocketchat-operator/0.0.1/rocketchat-operator.v0.0.1.clusterserviceversion.yaml
+        crds-dir: deploy/olm-catalog/rocketchat-operator/0.0.1/
+        cr-manifest:
+          - deploy/crds/open.rocket.chat_v1alpha1_rocketchat_cr.yaml

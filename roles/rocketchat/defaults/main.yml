@@ -1,0 +1,6 @@
+---
+# defaults file for rocketchat
+k8s_name: "{{ meta.name | default('rocketchat') }}"
+namespace: "{{ meta.namespace | default('rocketchat') }}"
+labels:
+  app: rocketchat

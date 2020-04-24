@@ -1,0 +1,297 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "open.rocket.chat/v1alpha1",
+          "kind": "RocketChat",
+          "metadata": {
+            "name": "rocketchat-quickstart"
+          },
+          "spec": {
+            "labels": {
+              "app": "rocketchat"
+            },
+            "memoryLimit": "512Mi",
+            "mongodbDatabase": "rocketchat",
+            "mongodbReplicaName": "rs0",
+            "mongodbReplicas": 1,
+            "mongodbSecretName": "mongodb-secret",
+            "rocketchatReplicas": 1,
+            "volumeCapacity": "1Gi"
+          }
+        }
+      ]
+    capabilities: Basic Install
+    categories: Streaming & Messaging
+    certified: "true"
+    containerImage: quay.io/rhc4tp/rocketchat-operator:v0.0.1
+    createdAt: 2020-03-26T04:07:54+00:00
+    description: Deploy Rocket.Chat Collaboration Platform on OpenShift
+    repository: github.com/jsm84/rocketchat-operator
+    support: Rocket.Chat
+  name: rocketchat-operator.v0.0.1
+spec:
+  customresourcedefinitions:
+    owned:
+    - name: rocketchats.open.rocket.chat
+      kind: RocketChat
+      version: v1alpha1
+      description: RocketChat Custom Resource Template
+      displayName: RocketChat
+  description: |
+    # Rocket.Chat Operator
+
+    This will launch an instance of the Rocket.Chat collaboration platform on your OpenShift cluster.
+    It is designed as a "push-button-go" operator, leveraging Ansible for the underlying logic.
+    The operator handles the provisioning of MongoDB from Red Hat Software Collections, and the deployment of Rocket.Chat from the Red Hat Container Catalog.
+
+    ## Quick Instructions
+
+    To get started, you can use the included RocketChat custom resource template (provided when installing from OperatorHub), which will launch Rocket.Chat with the following options:
+
+    * 1 GiB storage volume for MongoDB
+    * 512 MiB memory limit each for MongoDB and Rocket.Chat
+    * Single pod instances of MongoDB and Rocket.Chat
+    * Automatically generated credentials for MongoDB, stored in a Kubernetes secret
+
+    ## Custom Installation
+
+    The default CR template is enough to get started, but for a production environment you'll likely want to adjust your resource size accordingly.
+
+    Storage, memory and pod replicas can be adjusted by changing the respective fields in the RocketChat custom resource:
+
+    ```
+    apiVersion: open.rocket.chat/v1alpha1
+    kind: RocketChat
+    metadata:
+      name: rocketchat-custom
+    spec:
+      mongodbReplicas: 1
+      memoryLimit: 512Mi
+      rocketchatReplicas: 1
+      volumeCapacity: 1Gi
+    ```
+
+    You can also install Rocket.Chat using an ephemeral storage volume by setting the `spec.volumeCapacity` field of the CR to an empty string:
+
+    ```
+    apiVersion: open.rocket.chat/v1alpha1
+    kind: RocketChat
+    metadata:
+      name: rocketchat-custom
+    spec:
+      volumeCapacity: ""
+    ```
+
+    If you would like to provide your own MongoDB credentials, you can create a Kubernetes secret with the following fields (`keyfile` is a base64 encoded, 756 character randomized string):
+
+    ```
+    username:
+    password:
+    admin_password:
+    keyfile:
+    ```
+
+    The name of the kubernetes secret you created above should be set in the RocketChat custom resource:
+
+    ```
+    apiVersion: open.rocket.chat/v1alpha1
+    kind: RocketChat
+    metadata:
+      name: rocketchat-custom
+    spec:
+      mongodbSecretName: mongodb-secret-name
+    ```
+
+    You can customize or add labels that will be applied by the operator to all of the created objects:
+
+    ```
+    apiVersion: open.rocket.chat/v1alpha1
+    kind: RocketChat
+    metadata:
+      name: rocketchat-custom
+    spec:
+      labels:
+        app: rocketchat
+        env: production
+        region: na-east
+    ```
+
+    If desired, you can also customize the MongoDB database and replicaset names:
+
+    ```
+    apiVersion: open.rocket.chat/v1alpha1
+    kind: RocketChat
+    metadata:
+      name: rocketchat-custom
+    spec:
+      mongodbDatabase: rocketchat
+      mongodbReplicaName: rs0
+    ```
+  displayName: Rocket.Chat Operator
+  icon:
+  - base64data: |-
+      PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE2LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4iICJodHRwOi8vd3d3LnczLm9yZy9HcmFwaGljcy9TVkcvMS4xL0RURC9zdmcxMS5kdGQiPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iNDM1LjcyMXB4IiBoZWlnaHQ9Ijg1LjI0MnB4IiB2aWV3Qm94PSI2Mi40MDIgLTE4Ljc2NiA0MzUuNzIxIDg1LjI0MiIgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyA2Mi40MDIgLTE4Ljc2NiA0MzUuNzIxIDg1LjI0MiIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+CjxnPgoJPHBhdGggZmlsbD0iIzA0NDM2QSIgZD0iTTIwNS40NTYsMjIuMjA3YzAsNC4yOTctMS42MDMsNy4xMTktNC42ODEsOC40NjVsNC40MjUsMTYuODAzYzAuMTkyLDAuNzcxLTAuMTkyLDEuMTU0LTAuODk4LDEuMTU0aC02LjY3ICAgYy0wLjY0MSwwLTAuOTYxLTAuMzItMS4wOS0wLjg5OGwtNC4yOTctMTYuMjg5aC00LjQyNXYxNi4xNjJjMCwwLjY0Mi0wLjM4NCwxLjAyNS0xLjAyNiwxLjAyNWgtNi42NyAgIGMtMC42NDEsMC0xLjAyNi0wLjM4NS0xLjAyNi0xLjAyNVYtMS42NTFjMC0wLjY0MSwwLjM4NS0xLjAyNiwxLjAyNi0xLjAyNmgxNi4wOTdjNi4wMjgsMCw5LjIzNSwzLjIwNyw5LjIzNSw5LjIzNVYyMi4yMDcgICBMMjA1LjQ1NiwyMi4yMDd6IE0xOTQuMTY5LDIyLjk3NmMxLjY2NywwLDIuNTY1LTAuODk4LDIuNTY1LTIuNTY1VjguMzU0YzAtMS42NjctMC44OTgtMi41NjQtMi41NjUtMi41NjRoLTYuMzQ5djE3LjE4NyAgIEwxOTQuMTY5LDIyLjk3NkwxOTQuMTY5LDIyLjk3NnoiLz4KCTxwYXRoIGZpbGw9IiMwNDQzNkEiIGQ9Ik0yMTAuNTgzLDYuNTU4YzAtNi4wMjgsMy4yMDYtOS4yMzUsOS4yMzUtOS4yMzVoNy4xODNjNi4wMjgsMCw5LjIzNSwzLjIwNyw5LjIzNSw5LjIzNXYzMi44MzYgICBjMCw2LjAyNy0zLjIwNyw5LjIzNC05LjIzNSw5LjIzNGgtNy4xODNjLTYuMDI5LDAtOS4yMzUtMy4yMDctOS4yMzUtOS4yMzRWNi41NTh6IE0yMjUuMzk3LDQwLjM1NSAgIGMxLjY2NywwLDIuNTY1LTAuODM0LDIuNTY1LTIuNTY1VjguMTYyYzAtMS42NjctMC44OTgtMi41NjUtMi41NjUtMi41NjVoLTMuNzE5Yy0xLjY2NywwLTIuNTY1LDAuODk4LTIuNTY1LDIuNTY1djI5LjYyOSAgIGMwLDEuNzMsMC44OTgsMi41NjQsMi41NjUsMi41NjRIMjI1LjM5N0wyMjUuMzk3LDQwLjM1NXoiLz4KCTxwYXRoIGZpbGw9IiMwNDQzNkEiIGQ9Ik0yNjguMzYyLDEzLjQ4NGMwLDAuNjQyLTAuMzg1LDEuMDI2LTEuMDI1LDEuMDI2aC02LjQxM2MtMC43MDYsMC0xLjAyNi0wLjM4NC0xLjAyNi0xLjAyNnYtNS4xMyAgIGMwLTEuNjY3LTAuODk3LTIuNTY0LTIuNTY0LTIuNTY0aC0zLjMzNWMtMS43MzEsMC0yLjU2NSwwLjg5Ny0yLjU2NSwyLjU2NFYzNy42YzAsMS43MzEsMC44OTcsMi41NjMsMi41NjUsMi41NjNoMy4zMzUgICBjMS42NjcsMCwyLjU2NC0wLjgzMywyLjU2NC0yLjU2M3YtNS4xMzJjMC0wLjY0MiwwLjMyLTEuMDI2LDEuMDI2LTEuMDI2aDYuNDEzYzAuNjQzLDAsMS4wMjUsMC4zODQsMS4wMjUsMS4wMjZ2Ni45MjcgICBjMCw2LjAyNy0zLjI3MSw5LjIzNC05LjIzNCw5LjIzNGgtNy4xODNjLTYuMDI4LDAtOS4yOTktMy4yMDctOS4yOTktOS4yMzRWNi41NThjMC02LjAyOCwzLjI3MS05LjIzNSw5LjI5OS05LjIzNWg3LjE4MyAgIGM1Ljk2NCwwLDkuMjM0LDMuMjA3LDkuMjM0LDkuMjM1VjEzLjQ4NHoiLz4KCTxwYXRoIGZpbGw9IiMwNDQzNkEiIGQ9Ik0yOTUuNDIyLDQ4LjYyOWMtMC43NzEsMC0xLjIxOC0wLjMyLTEuNDc2LTAuOTYxbC04LjA3OS0xOS4wNDhsLTIuMzc0LDQuNTU0djE0LjE3MiAgIGMwLDAuODM0LTAuNDQ4LDEuMjgzLTEuMjgyLDEuMjgzaC02LjE1N2MtMC44MzQsMC0xLjI4My0wLjQ0OS0xLjI4My0xLjI4M3YtNDguNzRjMC0wLjgzMywwLjQ0OS0xLjI4MywxLjI4My0xLjI4M2g2LjE1NyAgIGMwLjgzMywwLDEuMjgyLDAuNDQ5LDEuMjgyLDEuMjgzdjE5Ljg4MWw5Ljg3Ni0yMC4yMDJjMC4zMjEtMC42NDEsMC43NzEtMC45NjIsMS40NzYtMC45NjJoNi43MzNjMC45NjIsMCwxLjM0NywwLjY0MiwwLjg5NywxLjUzOSAgIGwtMTAuOTAxLDIyLjM4MmwxMS42MDYsMjUuOTFjMC40NDksMC44MzQsMC4wNjQsMS40NzUtMC45NjEsMS40NzVIMjk1LjQyMnoiLz4KCTxwYXRoIGZpbGw9IiMwNDQzNkEiIGQ9Ik0zMzMuNDUsNC43NjNjMCwwLjY0MS0wLjI1NywxLjA5LTEuMDI2LDEuMDloLTE2LjAzM3YxMi44MjZoMTIuMjQ5YzAuNjQzLDAsMS4wMjYsMC4zODUsMS4wMjYsMS4wOXY2LjM0OSAgIGMwLDAuNzA2LTAuMzg1LDEuMDkxLTEuMDI2LDEuMDkxaC0xMi4yNDl2MTIuOTU0aDE2LjAzM2MwLjc3MSwwLDEuMDI2LDAuMzIxLDEuMDI2LDEuMDI2djYuNDE0YzAsMC42NDEtMC4yNTcsMS4wMjQtMS4wMjYsMS4wMjQgICBoLTIzLjZjLTAuNTc4LDAtMC45NjMtMC4zODUtMC45NjMtMS4wMjRWLTEuNjUxYzAtMC42NDEsMC4zODUtMS4wMjYsMC45NjMtMS4wMjZoMjMuNmMwLjc3MSwwLDEuMDI2LDAuMzg1LDEuMDI2LDEuMDI2VjQuNzYzeiIvPgoJPHBhdGggZmlsbD0iIzA0NDM2QSIgZD0iTTM2My4yMDQtMi42NzdjMC43MDUsMCwxLjAyNiwwLjM4NSwxLjAyNiwxLjAyNnY2LjQxNGMwLDAuNjQxLTAuMzIxLDEuMDI2LTEuMDI2LDEuMDI2aC03LjQzOXY0MS44MTQgICBjMCwwLjcwNS0wLjMyLDEuMDI0LTEuMDI1LDEuMDI0aC02LjY3Yy0wLjY0MywwLTEuMDI2LTAuMzE5LTEuMDI2LTEuMDI0VjUuNzg5aC03LjQzOGMtMC42NDMsMC0xLjAyNi0wLjM4NS0xLjAyNi0xLjAyNnYtNi40MTQgICBjMC0wLjY0MSwwLjM4NS0xLjAyNiwxLjAyNi0xLjAyNkgzNjMuMjA0eiIvPgoJPHBhdGggZmlsbD0iIzA0NDM2QSIgZD0iTTM2My41ODUsNDEuNDQ1YzAtMC44MzQsMC40NDktMS4yODIsMS4yODMtMS4yODJoNS44MzZjMC44MzQsMCwxLjI4MiwwLjQ0OCwxLjI4MiwxLjI4MnY1Ljg5OSAgIGMwLDAuODM1LTAuNDQ4LDEuMjgzLTEuMjgyLDEuMjgzaC01LjgzNmMtMC44MzQsMC0xLjI4My0wLjQ0OC0xLjI4My0xLjI4M1Y0MS40NDV6Ii8+Cgk8cGF0aCBmaWxsPSIjMDQ0MzZBIiBkPSJNNDA0LjExNCwxMy40ODRjMCwwLjY0Mi0wLjM4NiwxLjAyNi0xLjAyNiwxLjAyNmgtNi40MTNjLTAuNzA1LDAtMS4wMjUtMC4zODQtMS4wMjUtMS4wMjZ2LTUuMTMgICBjMC0xLjY2Ny0wLjg5Ny0yLjU2NC0yLjU2NC0yLjU2NGgtMy4zMzVjLTEuNzMyLDAtMi41NjUsMC44OTctMi41NjUsMi41NjRWMzcuNmMwLDEuNzMxLDAuODk3LDIuNTYzLDIuNTY1LDIuNTYzaDMuMzM1ICAgYzEuNjY3LDAsMi41NjQtMC44MzMsMi41NjQtMi41NjN2LTUuMTMyYzAtMC42NDIsMC4zMi0xLjAyNiwxLjAyNS0xLjAyNmg2LjQxM2MwLjY0MywwLDEuMDI2LDAuMzg0LDEuMDI2LDEuMDI2djYuOTI3ICAgYzAsNi4wMjctMy4yNzEsOS4yMzQtOS4yMzUsOS4yMzRoLTcuMTgzYy02LjAyOCwwLTkuMjk5LTMuMjA3LTkuMjk5LTkuMjM0VjYuNTU4YzAtNi4wMjgsMy4yNzEtOS4yMzUsOS4yOTktOS4yMzVoNy4xODMgICBjNS45NjUsMCw5LjIzNSwzLjIwNyw5LjIzNSw5LjIzNVYxMy40ODR6Ii8+Cgk8cGF0aCBmaWxsPSIjMDQ0MzZBIiBkPSJNNDI3LjQ1NS0xLjY1MWMwLTAuNjQxLDAuMzg0LTEuMDI2LDEuMDI1LTEuMDI2aDYuNjA1YzAuNzcsMCwxLjA4OSwwLjM4NSwxLjA4OSwxLjAyNnY0OS4yNTQgICBjMCwwLjY0MS0wLjMyLDEuMDI0LTEuMDg5LDEuMDI0aC02LjYwNWMtMC42NDMsMC0xLjAyNS0wLjM4NS0xLjAyNS0xLjAyNFYyNy4yMDloLTguMjA5djIwLjM5NWMwLDAuNjQyLTAuMzg1LDEuMDI1LTEuMDI2LDEuMDI1ICAgaC02LjYwNGMtMC43NzEsMC0xLjA5MS0wLjM4NS0xLjA5MS0xLjAyNVYtMS42NTFjMC0wLjY0MSwwLjMyLTEuMDI2LDEuMDkxLTEuMDI2aDYuNjA0YzAuNjQzLDAsMS4wMjYsMC4zODUsMS4wMjYsMS4wMjZ2MjAuMzk0ICAgaDguMjA5Vi0xLjY1MUw0MjcuNDU1LTEuNjUxeiIvPgoJPHBhdGggZmlsbD0iIzA0NDM2QSIgZD0iTTQ2NS40MTksNDguNjI5Yy0wLjU3NywwLTAuODk3LTAuMzItMS4wMjYtMC44OThsLTEuNzk1LTkuMzYyaC0xMS40MTZsLTEuNzMsOS4zNjIgICBjLTAuMTI5LDAuNTc4LTAuNDQ5LDAuODk4LTEuMDI2LDAuODk4aC02Ljg2MWMtMC43MDUsMC0xLjAyNi0wLjM4NS0wLjgzNS0xLjA5bDEwLjY0Ni00OS4zMThjMC4xMjktMC42NDEsMC41MTMtMC44OTgsMS4wOS0wLjg5OCAgIGg4LjkxNWMwLjU3NywwLDAuOTYyLDAuMjU3LDEuMDksMC44OThsMTAuNjQ2LDQ5LjMxOGMwLjEyOSwwLjcwNS0wLjEyOCwxLjA5LTAuODk3LDEuMDlINDY1LjQxOXogTTQ1Ni44ODksOC41NDZsLTQuMTA0LDIyLjM4MiAgIGg4LjIwOUw0NTYuODg5LDguNTQ2eiIvPgoJPHBhdGggZmlsbD0iIzA0NDM2QSIgZD0iTTQ5Ny4wOTctMi42NzdjMC43MDUsMCwxLjAyNiwwLjM4NSwxLjAyNiwxLjAyNnY2LjQxNGMwLDAuNjQxLTAuMzIxLDEuMDI2LTEuMDI2LDEuMDI2aC03LjQzOHY0MS44MTQgICBjMCwwLjcwNS0wLjMyMSwxLjAyNC0xLjAyNiwxLjAyNGgtNi42N2MtMC42NDEsMC0xLjAyNS0wLjMxOS0xLjAyNS0xLjAyNFY1Ljc4OWgtNy40MzhjLTAuNjQyLDAtMS4wMjUtMC4zODUtMS4wMjUtMS4wMjZ2LTYuNDE0ICAgYzAtMC42NDEsMC4zODUtMS4wMjYsMS4wMjUtMS4wMjZINDk3LjA5N3oiLz4KPC9nPgo8cGF0aCBmaWxsPSIjQzEyNzJEIiBkPSJNMTYyLjU4NiwyMy43ODhjMC01LjAzMS0xLjUwNS05Ljg1NC00LjQ3NC0xNC4zMzljLTIuNjY2LTQuMDI1LTYuNDAxLTcuNTg4LTExLjEtMTAuNTkxICBjLTkuMDc0LTUuNzk2LTIxLTguOTg5LTMzLjU3OS04Ljk4OWMtNC4yMDIsMC04LjM0NCwwLjM1NS0xMi4zNjEsMS4wNTljLTIuNDkyLTIuMzMzLTUuNDEtNC40MzItOC40OTctNi4wOTEgIGMtMTYuNDk0LTcuOTk0LTMwLjE3Mi0wLjE4OC0zMC4xNzItMC4xODhTNzUuMTItNC45MDQsNzMuMDUyLDQuMjUzYy01LjY4OSw1LjY0NC04Ljc3MywxMi40NS04Ljc3MywxOS41MzUgIGMwLDAuMDIyLDAuMDAxLDAuMDQ1LDAuMDAxLDAuMDY4YzAsMC4wMjItMC4wMDEsMC4wNDQtMC4wMDEsMC4wNjhjMCw3LjA4NSwzLjA4MywxMy44OTEsOC43NzMsMTkuNTM0ICBjMi4wNjgsOS4xNTgtMTAuNjQ5LDE5LjYwNS0xMC42NDksMTkuNjA1czEzLjY3OCw3LjgwNSwzMC4xNzItMC4xODhjMy4wODctMS42NTksNi4wMDQtMy43NTksOC40OTctNi4wOTEgIGM0LjAxOCwwLjcwMyw4LjE1OSwxLjA1OCwxMi4zNjEsMS4wNThjMTIuNTgsMCwyNC41MDUtMy4xOTEsMzMuNTc5LTguOTg3YzQuNjk5LTMuMDAzLDguNDM0LTYuNTY1LDExLjEtMTAuNTkyICBjMi45NjktNC40ODQsNC40NzQtOS4zMDksNC40NzQtMTQuMzM4YzAtMC4wMjMtMC4wMDEtMC4wNDUtMC4wMDEtMC4wNjhTMTYyLjU4NiwyMy44MSwxNjIuNTg2LDIzLjc4OHoiLz4KPHBhdGggZmlsbD0iI0ZGRkZGRiIgZD0iTTExMy40MzMtMy4wMThjMjMuMjkzLDAsNDIuMTc3LDEyLjA2Miw0Mi4xNzcsMjYuOTQxYzAsMTQuODc4LTE4Ljg4NCwyNi45NDEtNDIuMTc3LDI2Ljk0MSAgYy01LjE4NywwLTEwLjE1NC0wLjYtMTQuNzQzLTEuNjkzYy00LjY2NCw1LjYxLTE0LjkyNCwxMy40MTEtMjQuODkxLDEwLjg5YzMuMjQyLTMuNDgyLDguMDQ1LTkuMzY2LDcuMDE3LTE5LjA1OCAgYy01Ljk3NC00LjY0OC05LjU2LTEwLjU5Ny05LjU2LTE3LjA4QzcxLjI1NSw5LjA0Myw5MC4xMzktMy4wMTgsMTEzLjQzMy0zLjAxOCIvPgo8Zz4KCTxnPgoJCTxjaXJjbGUgZmlsbD0iI0MxMjcyRCIgY3g9IjExMy40MzMiIGN5PSIyNC43OSIgcj0iNS42MDMiLz4KCTwvZz4KCTxnPgoJCTxjaXJjbGUgZmlsbD0iI0MxMjcyRCIgY3g9IjEzMi45MTMiIGN5PSIyNC43OSIgcj0iNS42MDMiLz4KCTwvZz4KCTxnPgoJCTxjaXJjbGUgZmlsbD0iI0MxMjcyRCIgY3g9IjkzLjk1MiIgY3k9IjI0Ljc5IiByPSI1LjYwMiIvPgoJPC9nPgo8L2c+CjxnPgoJPHBhdGggZmlsbD0iI0NDQ0NDQyIgZD0iTTExMy40MzMsNDcuMzE5Yy01LjE4NywwLTEwLjE1NC0wLjUyLTE0Ljc0My0xLjQ2OGMtNC4xMTgsNC4yOTQtMTIuNiwxMC4wNjYtMjEuMzksOS44NTQgICBjLTEuMTU4LDEuNzU1LTIuNDE3LDMuMTktMy41MDEsNC4zNTVjOS45NjcsMi41MjEsMjAuMjI3LTUuMjc5LDI0Ljg5MS0xMC44OWM0LjU4OSwxLjA5NCw5LjU1NywxLjY5MywxNC43NDMsMS42OTMgICBjMjMuMTA2LDAsNDEuODctMTEuODcxLDQyLjE2OS0yNi41ODVDMTU1LjMwMywzNy4wMzIsMTM2LjUzOSw0Ny4zMTksMTEzLjQzMyw0Ny4zMTl6Ii8+CjwvZz4KPC9zdmc+
+    mediatype: image/svg+xml
+  install:
+    spec:
+      deployments:
+      - name: rocketchat-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: rocketchat-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: rocketchat-operator
+            spec:
+              containers:
+              - env:
+                - name: RELATED_IMAGE_MONGODB
+                  value: registry.access.redhat.com/rhscl/mongodb-36-rhel7:1-45
+                - name: RELATED_IMAGE_ROCKETCHAT
+                  value: registry.connect.redhat.com/rocketchat/rocketchat:1.1.1-19
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: rocketchat-operator
+                - name: ANSIBLE_GATHERING
+                  value: explicit
+                image: quay.io/rhc4tp/rocketchat-operator:v0.0.1
+                imagePullPolicy: Always
+                name: rocketchat-operator
+                resources: {}
+                volumeMounts:
+                - mountPath: /tmp/ansible-operator/runner
+                  name: runner
+              serviceAccountName: rocketchat-operator
+              volumes:
+              - emptyDir: {}
+                name: runner
+      permissions:
+      - rules:
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - services/finalizers
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          - routes
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - apps
+          resourceNames:
+          - rocketchat-operator
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - replicasets
+          - deployments
+          verbs:
+          - get
+        - apiGroups:
+          - open.rocket.chat
+          resources:
+          - '*'
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        serviceAccountName: rocketchat-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - chat
+  - teams
+  - collaboration
+  - productivity
+  links:
+  - name: Rocket.Chat
+    url: https://rocket.chat
+  maintainers:
+  - name: Rocket.Chat
+    email: buildmaster@rocket.chat
+  maturity: alpha
+  provider:
+    name: Rocket.Chat
+  version: 0.0.1
